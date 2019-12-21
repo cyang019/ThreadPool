@@ -18,11 +18,11 @@ namespace lean {
     template<typename T>
     class ThreadPool {
     public:
-        ThreadPool<T>();
-        ThreadPool<T>(std::uint64_t n_workers);
-        ~ThreadPool<T>();
+        ThreadPool();
+        ThreadPool(std::uint64_t n_workers);
+        ~ThreadPool();
 
-        ThreadPool<T>& add_task(std::packaged_task<T()>&&);
+        ThreadPool<T>& add_task(std::function<T()>&&);
 
         ThreadPool<T>& run();
         std::vector<T> get_results();

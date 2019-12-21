@@ -26,13 +26,26 @@ namespace lean {
 		}
 
 		template<typename T>
-		std::thread ThreadPool<T>::run()
+		ThreadPool<T>& ThreadPool<T>::add_task(std::function<T()>&& task)
 		{
+			std::lock_guard<std::mutex> lk(m_mu);
+			m_job_q.push_back(std::move(task));
+			return *this;
+		}
+
+		template<typename T>
+		ThreadPool<T>& ThreadPool<T>::run()
+		{
+			std::lock_guard<std::mutex> lk(m_mu);
+			m_done = false;
+			lk.unlock();
 			for (size_t i = 0; i < m_workers.size(); ++i) {
 				std::packaged_task<T()> worker(this->m_work);
 				m_result_getters.emplace_back(worker.get_future());
 				m_workers[i] = std::make_unique(std::move(worker));
 			}
+
+			return *this;
 		}
 
 		template<typename T>
@@ -51,17 +64,20 @@ namespace lean {
 		{
 			std::vector<T> results;
 			std::unique_lock<std::mutex> lk(m_mu);
-			while (!m_done) {
-				m_cv.wait(lk, [this]() {return m_job_q.size() > 0; });
-				
-				std::function<T()> task = std::move(m_job_q.front());
-				m_job_q.pop_front();
-				lk.unlock();
+			m_cv.wait(lk, [this]() {
+				return (!(this->m_done)) || m_job_q.size().empty(); 
+			});
 
-				auto res = task();
-				results.push_back(res);
+			if (this->m_done && m_job_q.size().empty()) {
+				return results;
 			}
-			return results;
+				
+			std::function<T()> task = std::move(m_job_q.front());
+			m_job_q.pop_front();
+			lk.unlock();
+
+			auto res = task();
+			results.push_back(res);
 		}
 	}
 }
