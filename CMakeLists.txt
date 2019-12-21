@@ -1,5 +1,5 @@
 
-add_library(threadpool INTERFACE)
+add_library(lean INTERFACE)
 
-target_sources(threadpool INTERFACE threadpool.h)
+target_sources(lean INTERFACE threadpool.h)
 
