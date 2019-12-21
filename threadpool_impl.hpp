@@ -19,6 +19,9 @@ namespace lean {
 		{
 			std::lock_guard<std::mutex> lk(m_mu);
 			m_done = true;
+			while (!m_job_q.empty()) {
+				m_job_q.pop_front();
+			}
 			lk.unlock();
 			for (auto& uptr_worker : m_workers) {
 				upter_worker->join();
@@ -52,6 +55,13 @@ namespace lean {
 		std::vector<T> ThreadPool<T>::get_results()
 		{
 			std::vector<T> results;
+			std::unique_lock<std::mutex> lk(m_mu);
+			m_cv.wait(lk, [this]() {
+				return m_job_q.empty();
+				});
+			m_done = true;
+			lk.unlock();
+
 			for (auto& result_getter : m_result_getters) {
 				auto res = result_getter.get();
 				results.insert(results.end(), res.begin(), res.end());
@@ -65,10 +75,10 @@ namespace lean {
 			std::vector<T> results;
 			std::unique_lock<std::mutex> lk(m_mu);
 			m_cv.wait(lk, [this]() {
-				return (!(this->m_done)) || m_job_q.size().empty(); 
+				return this->m_done || (!m_job_q.empty()); 
 			});
 
-			if (this->m_done && m_job_q.size().empty()) {
+			if (this->m_done) {
 				return results;
 			}
 				
