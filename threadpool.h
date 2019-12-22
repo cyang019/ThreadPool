@@ -10,6 +10,7 @@
 #include <queue>
 #include <vector>
 #include <memory>
+#include <iostream>
 
 
 
@@ -30,11 +31,11 @@ namespace lean {
         mutable std::mutex m_mu;
         mutable std::condition_variable m_cv;
         bool m_done;
-        std::queue<std::function<T()>> m_job_q;
-        std::vector<std::unique_ptr<std::thread>> m_workers;
-        std::vector<std::future<std::vector<T>>> m_result_getters;
+        std::uint64_t m_worker_cnt;
 
-        std::vector<T> m_work()
+        std::queue<std::function<T()>> m_job_q;
+        std::vector<std::thread> m_workers;
+        std::vector<std::future<std::vector<T>>> m_result_getters;
     };  // class ThreadPool
   } // v1
 } // lean
