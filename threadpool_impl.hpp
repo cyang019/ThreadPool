@@ -1,4 +1,4 @@
-/*/*BSD 3-Clause License
+/*BSD 3-Clause License
 
 Copyright (c) 2019, Chen Yang, yangcnju@gmail.com
 All rights reserved.
@@ -100,6 +100,7 @@ namespace lean {
 				m_result_getters.emplace_back(worker.get_future());
 				m_workers.emplace_back(std::move(worker));
 			}
+      m_cv.notify_one();
 
 			return *this;
 		}
